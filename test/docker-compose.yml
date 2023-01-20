@@ -1,0 +1,44 @@
+services:
+  ldap:
+    image: osixia/openldap:1.5.0
+    ports:
+      - 389:389
+    volumes:
+      - ./bootstrap/ldif/custom:/container/service/slapd/assets/config/bootstrap/ldif/custom:ro
+    command: --copy-service
+  sssd:
+    image: ghcr.io/borg-fleet/sssd:latest
+    depends_on:
+      - ldap
+    volumes:
+      - sssd-pipes:/var/lib/sss/pipes:rw
+    environment:
+      SSSD_CONF: |
+        [sssd]
+        config_file_version = 2
+        services = nss, pam, ssh
+        domains = example.org
+
+        [domain/example.org]
+        id_provider = ldap
+        auth_provider = ldap
+        ldap_uri = ldap://ldap:389
+        cache_credentials = false
+        enumerate = true
+        use_fully_qualified_names = false
+        ldap_schema = rfc2307
+        ldap_search_base = dc=example,dc=org
+        ldap_user_ssh_public_key = sshPublicKey
+        ldap_default_bind_dn = cn=admin,dc=example,dc=org
+        ldap_default_authtok = admin
+  borg:
+    build: ..
+    depends_on:
+      - sssd
+    ports:
+      - 22:2222
+    volumes:
+      - sssd-pipes:/var/lib/sss/pipes:ro
+
+volumes:
+  sssd-pipes: {}
