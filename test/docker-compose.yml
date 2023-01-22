@@ -1,0 +1,95 @@
+version: '3.8'
+services:
+  ldap:
+    image: osixia/openldap:1.5.0
+    ports:
+      - 389:389
+      - 636:636
+    volumes:
+      - ./bootstrap/ldif/custom:/container/service/slapd/assets/config/bootstrap/ldif/custom:ro
+      - ./bootstrap/certs:/container/service/slapd/assets/certs:ro
+    environment:
+      LDAP_TLS_VERIFY_CLIENT: try
+      LDAP_TLS_CRT_FILENAME: ldap.crt
+      LDAP_TLS_KEY_FILENAME: ldap.key
+      LDAP_TLS_CA_CRT_FILENAME: ca.crt
+      LDAP_TLS_PROTOCOL_MIN: '1.2'
+      LDAP_TLS_CIPHER_SUITE: SECURE128:-VERS-SSL3.0:+VERS-TLS1.2
+    command: --copy-service
+  sssd:
+    image: ghcr.io/borg-fleet/sssd:latest
+    depends_on:
+      - ldap
+    volumes:
+      - sssd-pipes:/var/lib/sss/pipes:rw
+      - ./bootstrap/certs:/ldap-certs:ro
+    environment:
+      SSSD_CONF: |
+        [sssd]
+        config_file_version = 2
+        services = nss, pam, ssh
+        domains = example.org
+
+        [domain/example.org]
+        debug_level=10
+        id_provider = ldap
+        auth_provider = ldap
+        ldap_uri = ldap://ldap
+        ldap_id_use_start_tls = true
+        ldap_tls_cipher_suite = SECURE128:-VERS-SSL3.0:+VERS-TLS1.2
+        ldap_tls_reqcert = allow
+        ldap_tls_cacertdir = /ldap-certs
+        cache_credentials = false
+        enumerate = true
+        use_fully_qualified_names = false
+        ldap_schema = rfc2307
+        ldap_search_base = dc=example,dc=org
+        ldap_user_ssh_public_key = sshPublicKey
+        ldap_default_bind_dn = cn=admin,dc=example,dc=org
+        ldap_default_authtok = admin
+  borg:
+    build: ..
+    depends_on:
+      - sssd
+    ports:
+      - 127.0.0.1:2223:22
+    volumes:
+      - sssd-pipes:/var/lib/sss/pipes:ro
+    environment:
+      SSHD_CONF: |
+        LogLevel DEBUG3
+        Port 22
+
+        UsePam yes
+
+        PermitRootLogin no
+        PasswordAuthentication yes
+        ChallengeResponseAuthentication no
+        KerberosAuthentication no
+        GSSAPIAuthentication no
+        X11Forwarding no
+        AllowAgentForwarding no
+        AllowTcpForwarding no
+        PermitTunnel no
+        PermitUserEnvironment no
+        PrintMotd no
+        DebianBanner no
+
+        ClientAliveInterval 10
+        ClientAliveCountMax 30
+        
+        AuthorizedKeysCommandUser sshd
+        AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys %u
+        ForceCommand borg serve --restrict-to-path "$${HOME}" --lock-wait 600 --append-only
+  borg-client:
+    build: ..
+    depends_on:
+      - borg
+    entrypoint: ''
+    command: sleep infinity
+    volumes:
+      - ./bootstrap/ssh_keys:/ssh_keys:ro
+
+volumes:
+  sssd-pipes: {}
+  openldap-certs: {}
