@@ -37,3 +37,18 @@ done
 
 sleep 1
 
+function exec_in_borg_container() {
+  docker exec -e 'BORG_REPO=billy@borg:backup' -e 'BORG_PASSPHRASE=test-passphrase' -e 'BORG_RSH=ssh -i /ssh_keys/id_ed25519 -o "StrictHostKeyChecking no"' test_borg-client_1 "$@"
+}
+
+echo "Test: Init borg repo"
+exec_in_borg_container borg init --append-only --encryption=repokey-blake2
+
+echo "Test: Create backup"
+exec_in_borg_container bash -c 'mkdir -p /root/important-files && echo important-text > /root/important-files/important-document.txt'
+exec_in_borg_container borg create --stats ::FIRST /root/important-files
+
+echo "Test: List backups"
+exec_in_borg_container borg list | grep -q FIRST
+
+echo "TESTS PASSWD"

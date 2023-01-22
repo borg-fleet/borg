@@ -11,7 +11,8 @@ loginShell: /bin/bash
 homeDirectory: /home/billy
 uidNumber: 14583102
 gidNumber: 14564100
-userPassword: {SSHA}j3lBh1Seqe4rqF1+NuWmjhvtAni1JC5A
+userPassword: billy
 mail: billy@example.org
 gecos: Billy User
-sshPublicKey: ssh-rsa ABC
+# taken from ../../ssh_keys/id_ed25519.pub
+sshPublicKey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPq6lbeoRL+3FbAl/pYqskuptQEjkx9rlaInHDW/pAnC codespace@codespaces-ab81da
