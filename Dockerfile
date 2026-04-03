@@ -1,6 +1,8 @@
 FROM ghcr.io/borg-fleet/sssd
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --yes borgbackup openssh-server
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --yes borgbackup openssh-server && \
+    rm -rf /var/lib/apt/lists/*
 RUN pam-auth-update --enable mkhomedir
 RUN mkdir /run/sshd && rm /etc/ssh/ssh_host*
 
