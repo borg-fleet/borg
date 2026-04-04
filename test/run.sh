@@ -57,4 +57,4 @@ exec_in_borg_container borg create --stats ::FIRST /root/important-files
 echo "Test: List backups"
 exec_in_borg_container borg list | grep -q FIRST
 
-echo "TESTS PASSWD"
+echo "TESTS PASSED"

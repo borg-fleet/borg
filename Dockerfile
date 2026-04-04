@@ -10,4 +10,5 @@ ADD entrypoint.sh /entrypoint.sh
 
 EXPOSE 22
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/usr/sbin/sshd","-D", "-e"]
